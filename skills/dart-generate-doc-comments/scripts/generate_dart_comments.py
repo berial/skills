@@ -214,7 +214,7 @@ class DartCommentGenerator:
                     continue
 
             # Check for function/method declaration with generic type support (handles nested generics)
-            func_match = re.match(r'^(?:static\s+)?(?:\w+(?:<[^()]+>)?)\s+(\w+)\s*\(([^)]*)\)\s*(?:async\s*)?(?:\{|;)', line)
+            func_match = re.match(r'^(?:static\s+)?(?:\w+(?:<[^()]+>)?)\s+(\w+)\s*\(([^)]*)\)\s*(?:async\*?\s*)?(?:\{|;)', line)
             if func_match:
                 name = func_match.group(1)
                 # Skip keywords and non-declarations
