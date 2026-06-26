@@ -13,6 +13,7 @@ npx skills add berial/skills --skill '*' --agent universal --yes
 | Skill | Description |
 |-------|-------------|
 | [dart-generate-doc-comments](skills/dart-generate-doc-comments/) | 为Dart代码生成Dartdoc API文档注释，支持中英文 |
+| [flutter-easy-refresh-standard](skills/flutter-easy-refresh-standard/) | 自动化规范 EasyRefresh：检测分页接口、强制Controller、生成本地化配置 |
 
 ## License
 
