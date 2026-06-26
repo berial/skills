@@ -262,8 +262,9 @@ class DartCommentGenerator:
         description = self._generate_description(element)
         lines_list.append(f'/// {description}')
 
-        # Add parameters documentation
+        # Add parameters documentation with empty line separator
         if element.parameters and element.type in ['function', 'method', 'constructor']:
+            lines_list.append('///')
             for param in element.parameters:
                 if param:
                     # Extract parameter name, handling named params with {} and this. prefix
