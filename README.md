@@ -5,7 +5,7 @@
 ## 安装
 
 ```bash
-npx skills add <your-username>/skills --skill '*' --agent universal --yes
+npx skills add berial/skills --skill '*' --agent universal --yes
 ```
 
 ## Skills
