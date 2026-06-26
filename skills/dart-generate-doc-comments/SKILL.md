@@ -1,8 +1,8 @@
 ---
 name: dart-generate-doc-comments
 description: >
-  为Dart代码生成全面的Dartdoc API文档注释。支持中英文（`--lang zh` / `--lang en`）。当用户创建/修改Dart文件、编写Dart代码、新增Dart类/函数/方法/枚举时自动调用。
-  Generate comprehensive Dartdoc API documentation comments for Dart code. Supports both Chinese (--lang zh) and English (--lang en). Trigger on Dart file creation, modification, class/function/method/enum addition, etc.
+  Generate comprehensive Dartdoc API documentation comments (/// ...) for Dart and Flutter code. Use this skill AFTER you create, write, edit, or scaffold any Dart (.dart) source file — including when writing new classes, functions, methods, constructors, enums, mixins, extensions, typedefs, or top-level declarations. Trigger automatically whenever you finish producing or modifying Dart/Flutter code for the user: building a feature, adding a widget/model/service, implementing a method, refactoring, or converting design to code — even if the user never mentions "docs" or "comments". Pick `--lang zh` when the user writes Chinese, `--lang en` when they write English.
+  为 Dart / Flutter 代码生成完整的 Dartdoc API 文档注释（///）。当你为用户**创建、编写、编辑、脚手架生成任何 Dart (.dart) 文件后必须调用**——新增类、函数、方法、构造函数、枚举、mixin、extension、typedef、顶层声明时同样适用。只要你在为用户产出或修改 Dart/Flutter 代码（实现功能、加 widget/model/service、实现方法、重构、把设计转成代码）就应自动触发，即使用户完全没提到"文档""注释"。用户用中文则 `--lang zh`，用英文则 `--lang en`。
 ---
 
 # Dart 注释生成器 / Dart Doc Comment Generator
