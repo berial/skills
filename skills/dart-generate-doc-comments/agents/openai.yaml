@@ -1,0 +1,4 @@
+interface:
+  display_name: "Dart Doc Comment Generator / Dart 注释生成器"
+  short_description: "Generate Dartdoc API comments for Dart code (supports en/zh). 为Dart代码生成Dartdoc API文档注释（支持中英文）。"
+  default_prompt: "Use \-generate-doc-comments to generate comprehensive documentation comments for my Dart code. Supports --lang en for English, --lang zh for Chinese. / 使用 \-generate-doc-comments 为我的Dart代码生成全面的文档注释。支持 --lang en 英文, --lang zh 中文。"
