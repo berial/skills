@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flutter EasyRefresh 自动化规范 / Automated EasyRefresh Standardization"
+  short_description: "Auto-detect paginated APIs, enforce EasyRefreshController, generate localization config. 自动检测分页接口、强制Controller、生成本地化配置。"
+  default_prompt: "Use flutter-easy-refresh-standard to: 1) Detect APIs with page/pageSize/offset/cursor and refactor to EasyRefresh + Controller pattern. 2) Ensure EasyRefreshController is used with controlFinishRefresh=true and controlFinishLoad=true. 3) Auto-create EasyRefreshConfig for localization. / 使用 flutter-easy-refresh-standard 自动检测分页接口并改造为 EasyRefresh+Controller 模式；确保使用 Controller（双 control 为 true）；自动创建 EasyRefreshConfig 本地化配置。"
