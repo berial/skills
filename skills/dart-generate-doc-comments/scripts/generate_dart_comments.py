@@ -96,14 +96,6 @@ class DartCommentGenerator:
             language = 'zh'
         self.language = language
         self.s = STRINGS[language]  # shortcut for string lookups
-
-        self.patterns = {
-            'function': r'^(?:static\s+)?(?:\w+\s+)?(\w+)\s*\(([^)]*)\)\s*(?:\{|;)',
-            'class': r'^class\s+(\w+)',
-            'enum': r'^enum\s+(\w+)',
-            'method': r'^\s+(?:static\s+)?(?:\w+\s+)?(\w+)\s*\(([^)]*)\)\s*(?:\{|;)',
-            'constructor': r'^\s+(\w+)\s*\(([^)]*)\)\s*(?::\s*[^{]*)?\s*(?:\{|;)',
-        }
         self._author = self._get_author()
 
     def _get_author(self) -> str:
@@ -173,18 +165,19 @@ class DartCommentGenerator:
 
         while i < len(lines):
             line = lines[i].strip()
+            original_line = lines[i]
 
             # Skip empty lines and comments
-            if not line or line.startswith('//') or line.startswith('/*'):
+            if not line or line.startswith('//') or line.startswith('/*') or line.startswith('///'):
                 i += 1
                 continue
 
             # Check for class declaration
-            class_match = re.match(self.patterns['class'], line)
+            class_match = re.match(r'^class\s+(\w+)', line)
             if class_match:
-                current_class = class_match.group(1)
+                current_class = class_class_name = class_match.group(1)
                 elements.append(DartElement(
-                    name=current_class,
+                    name=class_class_name,
                     type='class',
                     line_number=i + 1,
                     code=line
@@ -193,7 +186,7 @@ class DartCommentGenerator:
                 continue
 
             # Check for enum declaration
-            enum_match = re.match(self.patterns['enum'], line)
+            enum_match = re.match(r'^enum\s+(\w+)', line)
             if enum_match:
                 elements.append(DartElement(
                     name=enum_match.group(1),
@@ -204,8 +197,30 @@ class DartCommentGenerator:
                 i += 1
                 continue
 
-            # Check for function/method declaration
-            func_match = re.match(self.patterns['function'], line)
+            # Check for constructor (must be inside class and match ClassName pattern)
+            if current_class:
+                constructor_match = re.match(rf'^{re.escape(current_class)}\s*\(([^)]*)\)\s*(?::\s*[^{{]*)?\s*(?:\{{|;)', line)
+                if constructor_match:
+                    params = constructor_match.group(1).strip()
+                    elements.append(DartElement(
+                        name=current_class,
+                        type='constructor',
+                        line_number=i + 1,
+                        code=line,
+                        parameters=[p.strip() for p in params.split(',') if p.strip()],
+                        parent_class=current_class
+                    ))
+                    i += 1
+                    continue
+
+            # Check for function/method declaration with generic type support (handles nested generics)
+            func_match = re.match(r'^(?:static\s+)?(?:\w+(?:<[^()]+>)?)\s+(\w+)\s*\(([^)]*)\)\s*(?:async\s*)?(?:\{|;)', line)
+            if func_match:
+                name = func_match.group(1)
+                # Skip keywords and non-declarations
+                if name in ('if', 'else', 'for', 'while', 'switch', 'case', 'return', 'throw', 'try', 'catch', 'finally', 'class', 'enum', 'extends', 'implements', 'with', 'import', 'export', 'library', 'part'):
+                    func_match = None
+
             if func_match:
                 name = func_match.group(1)
                 params = func_match.group(2).strip()
@@ -213,13 +228,17 @@ class DartCommentGenerator:
                 # Determine if it's a method or function
                 elem_type = 'method' if current_class else 'function'
 
-                # Check for return type
+                # Check for return type (handle generics like Future<Map<String, dynamic>>)
                 return_type = None
                 if '(' in line:
                     before_paren = line[:line.index('(')].strip()
-                    parts = before_paren.split()
-                    if len(parts) > 1:
-                        return_type = parts[-2] if parts[-2] != 'static' else parts[-1]
+                    # Remove static keyword if present
+                    before_paren = re.sub(r'^static\s+', '', before_paren)
+                    # Extract the return type (everything before the function name)
+                    # Match pattern: ReturnType FunctionName
+                    rt_match = re.match(r'(.+?)\s+' + re.escape(name) + r'\s*$', before_paren)
+                    if rt_match:
+                        return_type = rt_match.group(1).strip()
 
                 elements.append(DartElement(
                     name=name,
@@ -247,9 +266,15 @@ class DartCommentGenerator:
         if element.parameters and element.type in ['function', 'method', 'constructor']:
             for param in element.parameters:
                 if param:
+                    # Extract parameter name, handling named params with {} and this. prefix
                     param_name = param.split()[-1] if ' ' in param else param
-                    param_desc = self._generate_parameter_description(param_name, element)
-                    lines_list.append(f'/// * [{param_name}] {param_desc}')
+                    # Remove this. prefix, braces, and optional/default values
+                    param_name = re.sub(r'^this\.', '', param_name)
+                    param_name = re.sub(r'[{}]', '', param_name)
+                    param_name = re.sub(r'=.*$', '', param_name)
+                    if param_name:
+                        param_desc = self._generate_parameter_description(param_name, element)
+                        lines_list.append(f'/// * [{param_name}] {param_desc}')
 
         # Add return type documentation
         if element.return_type and element.return_type != 'void':
@@ -347,26 +372,26 @@ class DartCommentGenerator:
         # Check if this is a new file (no existing dartdoc comments)
         is_new = self._is_new_file(lines)
 
-        # For new files, insert file header at the very beginning
+        # For new files, insert file header at the very beginning (before imports)
+        header_offset = 0
         if is_new:
             file_header = self._generate_file_header(file_path)
             header_lines = file_header.split('\n')
-            # Insert after any library/import declarations, before first code element
-            insert_pos = 0
-            for i, line in enumerate(lines):
-                stripped = line.strip()
-                if stripped and not stripped.startswith(('library ', 'import ', 'export ', 'part ', '//')):
-                    insert_pos = i
-                    break
+            # Insert at position 0 (before everything)
             for i, hline in enumerate(header_lines):
-                lines.insert(insert_pos + i, hline + '\n')
+                lines.insert(i, hline + '\n')
+            header_offset = len(header_lines)
             print(self.s['new_file_log'].format(author=self._author))
 
-        # Process elements in reverse order to maintain line numbers
+        # Adjust line numbers by header offset and process elements
         insertions = []
-        for element in reversed(elements):
+        for element in elements:
+            adjusted_line = element.line_number - 1 + header_offset
             comment = self.generate_comment(element)
-            insertions.append((element.line_number - 1, comment))
+            insertions.append((adjusted_line, comment))
+
+        # Sort by line number descending to insert from bottom to top
+        insertions.sort(key=lambda x: x[0], reverse=True)
 
         # Insert comments
         for line_index, comment in insertions:
