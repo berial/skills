@@ -1,47 +1,70 @@
 # Dartdoc 格式参考 / Dartdoc Format Reference
 
-## 文件头元数据（仅新文件）/ File Header Metadata (New Files Only)
+本文件是 `dart-generate-doc-comments` skill 的格式速查与中英写作指南。核心原则：**宁可少写，不要写废话。**
 
-当 Dart 文件中不存在任何 `///` 文档注释时（即新文件），应在文件顶部添加文件头。
+This file is the format quick-reference and EN/ZH writing guide for the `dart-generate-doc-comments` skill. Core principle: **prefer writing nothing over writing noise.**
 
-When no `///` doc comments exist in a Dart file (i.e., a new file), a file header should be added at the top.
+---
 
-```dart
-///
-/// @author {authorName}
-/// @created {YYYY-MM-DD HH:mm:ss}
-///
-/// {file_description}
-///
-```
+## 第一原则：避免无用注释 / First Principle: Avoid Useless Comments
 
-- `@author`：创建人姓名，优先从 `git config user.name` 获取，否则使用当前用户名
-  - Author name, obtained from `git config user.name` first, then falls back to current username
-- `@created`：文件创建时间，格式为 `YYYY-MM-DD HH:mm:ss`
-  - File creation time in `YYYY-MM-DD HH:mm:ss` format
-- `{file_description}`：文件/库的简要用途描述
-  - Brief description of the file/library purpose
+Dartdoc 的价值在于补充**代码本身看不出来**的信息。下列注释属于噪声，一律删除或改写：
 
-**注意**：此文件头仅对新文件生效。如果文件已存在 `///` 注释，则跳过文件头生成。
+Dartdoc is valuable only when it adds facts **not obvious from the code**. The following are noise — delete or rewrite them:
 
-**Note**: This header is only added for new files. If existing `///` comments are found, header generation is skipped.
+| 噪声模式 / Noise pattern | 问题 / Problem |
+|--------------------------|----------------|
+| 复述标识符 / Restates identifier | `/// Is adult.` on `bool get isAdult` —— 名字已说明 |
+| 复述参数类型 / Restates param type | `/// [page] The page.` on `int page` —— 签名已写明 |
+| 复述返回类型 / Restates return type | `/// Returns the result as String.` —— 签名已有 `String` |
+| 凑数假示例 / Fake example | `instance.add(0, 0)` —— 不能编译、无意义 |
+| javadoc 标签 / javadoc tags | `@author` / `@created` / `@param` —— 非 Dartdoc 规范 |
+
+**判断口诀**：删掉这条注释，读者会不会漏掉某个"代码本身看不出来"的事实？会→写；不会→删。
+
+---
+
+## 何时跳过 / When to Skip
+
+默认对自明代码不写注释 / By default, do not comment self-explanatory code：
+
+- 方法名/字段名已说明用途（`getDisplayName()`、`isAdult`、`User.name`）
+- 参数文档只是重复类型
+- 返回值只是复述类型
+- 简单 getter / setter / 纯委托
+- 构造函数只是赋值字段
+- 纯数据类字段（除非有约束）
+
+---
+
+## 何时该写 / When to Write
+
+只有当注释能补充代码没说清楚的信息时才写 / Only when the comment adds facts the code does not make clear：
+
+- **真实用途/意图**：名字不够直观，或方法做了非显然的事
+- **前置条件 / 约束**：`page` 必须 ≥ 1；`width` 单位是逻辑像素
+- **单位 / 格式**：Unix 毫秒还是秒；金额单位；经纬度还是屏幕像素
+- **副作用**：修改外部状态、写文件、发起网络请求、触发通知
+- **异常**：何时抛出哪种异常
+- **边界 / 空安全**：`null` 代表什么；列表可能为空；越界行为
+- **复杂算法 / 协议**：缓存策略、重试逻辑、分页协议、排序稳定性
 
 ---
 
 ## 基本结构 / Basic Structure
 
 ```dart
-/// Brief description of the element. / 元素的简要描述。
+/// 首行：简短的一句话摘要（不超过一行）。/ One-line summary.
 ///
-/// Longer description if needed, can span multiple lines. / 如需更长描述，可跨多行。
+/// 可选的详细说明，仅在有内容时才写。/ Optional details, only when there's content.
 ///
-/// * [paramName] Description of the parameter. / 参数的描述。
+/// * [paramName] 参数用途（仅当非显然时）。/ Param purpose (only when non-obvious).
 ///
-/// Returns description of the return value. / 返回返回值的描述。
+/// 返回值说明（仅当返回值有非显然语义时）。/ Return value (only when non-obvious).
 ///
-/// Example: / 示例：
+/// 示例：（仅对非平凡 API）/ Example: (non-trivial APIs only)
 /// ```dart
-/// // example code / 示例代码
+/// final result = add(2, 3);
 /// ```
 ```
 
@@ -49,172 +72,80 @@ When no `///` doc comments exist in a Dart file (i.e., a new file), a file heade
 
 ## 文档标签 / Documentation Tags
 
-### 基本标签 / Basic Tags
-- `///` - 单行文档注释 / Single-line doc comment
-- `/** */` - 多行文档注释（在Dart中较少使用）/ Multi-line doc comment (less common in Dart)
+### 基础 / Basic
+- `///` — 文档注释（Dart 用 `///`，不用 `/** */`）/ Doc comment (use `///`, not `/** */`)
+- `[Name]` — 引用类、方法、参数、库，生成可点击链接 / Reference a class/method/param/library, renders as a link
+- `* [paramName] ...` — 参数列表（Markdown 列表）/ Param list (Markdown list)
 
-### 参数文档 / Parameter Documentation
-- `* [paramName]` - 参数引用 / Parameter reference
-- `@param paramName Description` - 替代格式 / Alternative format
-
-### 返回值 / Return Value
-- `Returns description` - 记录返回值 / Documents the return value
-- `@return description` - 替代格式 / Alternative format
-
-### 异常 / Exceptions
-- `Throws [ExceptionType] if condition` - 记录异常 / Documents exceptions
-- `@throws ExceptionType description` - 替代格式 / Alternative format
-
-### 引用 / References
-- `[ClassName]` - 类引用 / Class reference
-- `[methodName]` - 方法引用 / Method reference
-- `[libraryName]` - 库引用 / Library reference
+### 不要使用 / Do NOT use
+- ❌ `@author` / `@created` —— javadoc 标签，不属于 Dartdoc
+- ❌ `/** */` —— Dart 中较少使用
+- ❌ `@param` / `@return` —— 用 `* [param]` 和 `Returns ...` 文本代替
 
 ---
 
-## 示例模板 / Example Templates
+## 文件级说明 / File-level Docs
 
-### 函数文档 / Function Documentation
+**不使用** `@author` / `@created` 文件头。如确需说明整个库用途，用 Dartdoc 的 `library;` 段（可选）：
 
-**English:**
+Do **not** add `@author` / `@created` headers. If a library's purpose truly needs stating, use the Dartdoc `library;` directive (optional):
+
 ```dart
+/// 提供用户资料相关的数据模型与服务。
+/// Provides data models and services for user profiles.
+library user_profile;
+
+import 'package:flutter/material.dart';
+```
+
+多数文件不需要文件级注释。只有当用途从文件名/内容看不出时才写。
+
+---
+
+## 模板示例 / Template Examples
+
+### 有信息量的函数文档 / Informative Function Docs
+
+```dart
+/// 计算两个数的和。
 /// Calculates the sum of two numbers.
 ///
-/// * [a] The first number to add.
-/// * [b] The second number to add.
+/// * [a] 第一个加数。 / The first addend.
+/// * [b] 第二个加数。 / The second addend.
 ///
-/// Returns the sum of [a] and [b].
-///
-/// Example:
-/// ```dart
-/// final result = add(2, 3);
-/// print(result); // 5
-/// ```
-int add(int a, int b) {
-  return a + b;
-}
+/// 返回 [a] 与 [b] 的和。 / Returns the sum of [a] and [b].
+int add(int a, int b) => a + b;
 ```
 
-**中文 / Chinese:**
-```dart
-/// 计算两个数字的和。
-///
-/// * [a] 要相加的第一个数字。
-/// * [b] 要相加的第二个数字。
-///
-/// 返回 [a] 和 [b] 的和。
-///
-/// 示例：
-/// ```dart
-/// final result = add(2, 3);
-/// print(result); // 5
-/// ```
-int add(int a, int b) {
-  return a + b;
-}
-```
+> 注：`add` 本身已较自明，这里仅为展示格式。真实场景中，只有当存在溢出、特殊取值等约束时才值得写。
 
-### 类文档 / Class Documentation
+### 有信息量的类文档 / Informative Class Docs
 
-**English:**
 ```dart
-/// Represents a user in the system.
+/// 表示系统中的一个用户。 / Represents a user in the system.
 ///
-/// This class provides methods for managing user data and authentication.
+/// 不可变；通过 [User.copy] 或工厂方法产生新实例。 / Immutable; produce new instances via [User.copy] or factories.
 class User {
-  /// The user's unique identifier.
   final String id;
-
-  /// The user's display name.
   final String name;
 
-  /// Creates a new User instance.
-  ///
-  /// [id] The user's unique identifier.
-  /// [name] The user's display name.
-  User({required this.id, required this.name});
-
-  /// Authenticates the user with the given credentials.
-  ///
-  /// [username] The username for authentication.
-  /// [password] The password for authentication.
-  ///
-  /// Returns `true` if authentication succeeds, `false` otherwise.
-  ///
-  /// Throws [AuthenticationException] if credentials are invalid.
-  bool authenticate(String username, String password) {
-    return true;
-  }
+  const User({required this.id, required this.name});
 }
 ```
 
-**中文 / Chinese:**
+### 有信息量的枚举文档 / Informative Enum Docs
+
 ```dart
-/// 表示系统中的用户。
-///
-/// 此类提供管理用户数据和身份验证的方法。
-class User {
-  /// 用户的唯一标识符。
-  final String id;
-
-  /// 用户的显示名称。
-  final String name;
-
-  /// 创建新的User实例。
-  ///
-  /// [id] 用户的唯一标识符。
-  /// [name] 用户的显示名称。
-  User({required this.id, required this.name});
-
-  /// 使用给定凭据验证用户身份。
-  ///
-  /// [username] 用于身份验证的用户名。
-  /// [password] 用于身份验证的密码。
-  ///
-  /// 如果身份验证成功返回 `true`，否则返回 `false`。
-  ///
-  /// 如果凭据无效，抛出 [AuthenticationException]。
-  bool authenticate(String username, String password) {
-    return true;
-  }
-}
-```
-
-### 枚举文档 / Enum Documentation
-
-**English:**
-```dart
-/// Represents the status of a task.
+/// 表示任务的状态。 / Represents the status of a task.
 enum TaskStatus {
-  /// The task has not yet started.
+  /// 任务尚未开始。 / The task has not yet started.
   pending,
 
-  /// The task is currently in progress.
+  /// 任务进行中。 / The task is currently in progress.
   inProgress,
 
-  /// The task has been completed successfully.
+  /// 任务已成功完成。 / The task completed successfully.
   completed,
-
-  /// The task failed to complete.
-  failed,
-}
-```
-
-**中文 / Chinese:**
-```dart
-/// 表示任务的状态。
-enum TaskStatus {
-  /// 任务尚未开始。
-  pending,
-
-  /// 任务当前正在进行中。
-  inProgress,
-
-  /// 任务已成功完成。
-  completed,
-
-  /// 任务未能完成。
-  failed,
 }
 ```
 
@@ -222,29 +153,25 @@ enum TaskStatus {
 
 ## 语言特定规范 / Language-Specific Guidelines
 
-### 英文规范 / English Guidelines
-1. **Be concise**: Start descriptions with a capital letter, use complete sentences
-2. **Use third-person singular**: "Calculates...", "Represents...", "Creates..."
-3. **Parameter descriptions**: Use "The" prefix — "The first number to add."
-4. **Return value**: Use "Returns the..." or "A [type] representing..."
-5. **Examples**: Label with "Example:" not "Example：" (use ASCII colon)
+### 英文 / English
+1. 首行简短摘要，首字母大写，第三人称单数："Calculates...", "Represents...", "Creates..."
+2. 参数说明用 "The" 前缀且必须有信息增量："The 1-based page index (≥1)."
+3. 返回值："Returns the..." 或 "A [type] representing..."
+4. 示例标签用 ASCII 冒号：`Example:`
 
-### 中文规范 / Chinese Guidelines
-1. **简洁明了**：描述以句号结尾，使用完整句子
-2. **动词开头**：使用"计算..."、"表示..."、"创建..."等动词短语
-3. **参数描述**：使用"要..."的形式 — "要相加的第一个数字。"
-4. **返回值**：使用"返回..."开头
-5. **示例标签**：使用全角标点"示例："
+### 中文 / Chinese
+1. 首行简短摘要，句号结尾，动词短语："计算..."、"表示..."、"创建..."
+2. 参数说明用"要..."且必须有信息增量："从 1 开始的页码（≥1）。"
+3. 返回值："返回..."开头
+4. 示例标签用全角冒号：`示例：`
 
 ---
 
 ## 最佳实践 / Best Practices
 
-1. **简洁 / Be concise**：保持描述简短但信息丰富 / Keep descriptions short but informative
-2. **使用完整句子 / Use complete sentences**：以大写字母开头 / Start with a capital letter
-3. **记录非显而易见的行为 / Document non-obvious behavior**：关注代码中不明确的内容 / Focus on what's not obvious from the code
-4. **包含示例 / Include examples**：展示如何使用复杂API / Show how to use complex APIs
-5. **记录参数 / Document parameters**：解释每个参数的作用 / Explain what each parameter does
-6. **记录返回值 / Document return values**：解释返回的内容 / Explain what is returned
-7. **记录异常 / Document exceptions**：解释何时抛出异常 / Explain when exceptions are thrown
-8. **使用引用 / Use references**：链接到相关类和方法 / Link to related classes and methods
+1. **信息增量优先 / Information density first**：注释必须补充代码未表达的事实
+2. **首行简短 / Short first line**：一句话摘要，便于 IDE 悬浮预览
+3. **第三人称 / Third person**：英文用单数，中文用动词短语
+4. **引用代替重复 / Reference, don't restate**：用 `[ClassName]` 而非重新描述
+5. **示例仅在非平凡时写 / Examples only when non-trivial**：且必须能编译、参数真实
+6. **同一文件语种统一 / Consistent language**：不要中英混用

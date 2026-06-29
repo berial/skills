@@ -5,279 +5,247 @@ description: >
   为 Dart / Flutter 代码生成完整的 Dartdoc API 文档注释（///）。当你为用户**创建、编写、编辑、脚手架生成任何 Dart (.dart) 文件后必须调用**——新增类、函数、方法、构造函数、枚举、mixin、extension、typedef、顶层声明时同样适用。只要你在为用户产出或修改 Dart/Flutter 代码（实现功能、加 widget/model/service、实现方法、重构、把设计转成代码）就应自动触发，即使用户完全没提到"文档""注释"。用户用中文则 `--lang zh`，用英文则 `--lang en`。
 ---
 
-# Dart 注释生成器 / Dart Doc Comment Generator
+# Dart 注释生成 / Dart Doc Comments
 
 ## 概述 / Overview
 
-此skill为Dart代码自动生成Dartdoc API文档注释，**应在任何Dart开发活动中被调用**。支持**中文**和**英文**两种注释语言，通过 `--lang` 参数切换。
+此 skill 在 AI **写完或改完 Dart 代码后自动生效**：为代码内联补充**有信息量**的 Dartdoc 文档注释。它**不是**机械套模板——AI 必须读懂代码意图后再决定写什么、**以及要不要写**。
 
-This skill automatically generates Dartdoc API documentation comments for Dart code and **should be invoked during any Dart development activity**. Supports both **Chinese** and **English** comment languages, switchable via the `--lang` parameter.
+This skill activates automatically **after the AI writes or edits Dart code**: it adds **informative** Dartdoc comments inline. It is **not** mechanical templating — the AI must understand the code's intent before deciding what to write and **whether to write at all**.
 
-## 语言选择 / Language Selection
+核心原则 / Core principle：
 
-| 参数 | 语言 | 示例 |
-|------|------|------|
-| `--lang zh` | 中文（默认） | `python scripts/generate_dart_comments.py file.dart --lang zh` |
-| `--lang en` | English (default when user prefers English) | `python scripts/generate_dart_comments.py file.dart --lang en` |
+> **宁可少写，不要写废话。** 一条注释若只是复述了名字、参数类型或返回类型，就是噪声，必须删掉或改成有信息量的说明。
 
-**AI 自动判断规则：** 根据用户使用的语言自动选择 `--lang` 参数。用户使用中文则生成中文注释，使用英文则生成英文注释。
+> **Prefer writing nothing over writing noise.** A comment that merely restates an identifier, a parameter type, or a return type is noise — delete it or rewrite it to add real information.
 
-**AI auto-detection:** Automatically select `--lang` based on the user's language. Use `--lang zh` when the user writes in Chinese, `--lang en` when the user writes in English.
+---
 
-## 快速开始 / Quick Start
+## 第一原则：什么时候【不要】写注释 / When NOT to Write
 
-### 基本用法 / Basic Usage
+**默认对"自明"的代码不写注释。** 只有当注释能补充代码本身无法表达的信息时才写。遇到以下情况一律跳过：
 
-```bash
-# 为单个文件生成注释（中文默认）/ Generate comments for a single file (Chinese by default)
-python scripts/generate_dart_comments.py path/to/file.dart
+- **方法名/字段名已说明用途**：`getDisplayName()`、`isAdult()`、`User.name` —— 不写。
+- **参数文档只是重复类型**：`/// [page] The page.`（`int page` 已经写明是 int）—— 不写。
+- **返回值只是复述类型**：`/// Returns the result as String.` —— 不写；签名里已有 `String`。
+- **简单 getter / setter / 纯委托**：直接转发到字段或单次调用 —— 不写。
+- **构造函数只是赋值字段**：`User({required this.id, required this.name});` —— 不写。
+- **纯数据类字段**（除非有约束，见下）。
 
-# 生成英文注释 / Generate English comments
-python scripts/generate_dart_comments.py path/to/file.dart --lang en
+---
 
-# 生成中文注释（显式指定）/ Generate Chinese comments (explicit)
-python scripts/generate_dart_comments.py path/to/file.dart --lang zh
+## 什么时候【应该】写 / When to Write
 
-# 生成注释并保存到不同文件 / Generate and save to different file
-python scripts/generate_dart_comments.py path/to/file.dart output.dart --lang en
-```
+只有当注释能补充**代码没说清楚**的信息时才写。常见值得写的情况：
 
-### 手动生成文档 / Manual Documentation Generation
+| 信息类型 | 举例 |
+|----------|------|
+| **真实用途/意图** | 名字不够直观，或方法做了非显然的事（如 `fetchItems` 其实是"分页拉取，page 从 1 开始"） |
+| **前置条件 / 约束** | `[page]` 必须 ≥ 1；`width` 单位是逻辑像素；`id` 不可为空字符串 |
+| **单位 / 格式** | 时间戳是 Unix 毫秒还是秒；金额单位；坐标是经纬度还是屏幕像素 |
+| **副作用** | 方法会修改外部状态、写文件、发起网络请求、触发通知 |
+| **异常** | 何时抛出哪种异常、抛出的条件 |
+| **边界 / 空安全** | `null` 返回值代表什么；列表可能为空；越界行为 |
+| **复杂算法 / 协议** | 缓存策略、重试逻辑、分页协议、排序稳定性 |
 
-当自动生成不适用时，使用以下指南 / When automatic generation is not applicable, use these guidelines:
+**判断口诀**：如果删掉这条注释，读者会不会漏掉某个"代码本身看不出来"的事实？会 → 写；不会 → 删。
 
-1. **阅读Dartdoc格式参考 / Read the Dartdoc format reference**：参见 `references/dartdoc_format.md`
-2. **识别可文档化元素 / Identify documentable elements**：函数、方法、类、枚举 / functions, methods, classes, enums
-3. **生成文档 / Generate documentation**：遵循模板和最佳实践 / Follow templates and best practices
-4. **插入注释 / Insert comments**：将文档放置在每个元素上方 / Place documentation above each element
+---
+
+## 语言选择 / Language
+
+按**用户对话所用语言**自动决定注释语言，无需用户指定：
+
+| 用户对话语言 | 注释语言 | 文档标签 |
+|--------------|----------|----------|
+| 中文 | 中文 | `示例：`（全角冒号）|
+| 英文 | 英文 | `Example:`（ASCII 冒号）|
+
+- 用户用中文 → 全部注释用中文，第三人称动词短语，如"拉取分页数据。"
+- 用户用英文 → 全部注释用英文，第三人称单数，如"Fetches a page of items."
+- **同一文件内不要中英混用。**
+
+---
 
 ## 工作流程 / Workflow
 
-### 步骤1：分析Dart文件 / Step 1: Analyze Dart File
+每次写/改完 Dart 代码后，按以下步骤自检：
 
-```bash
-python scripts/generate_dart_comments.py path/to/file.dart
+```
+1. 通读刚写/改的每个公开声明（类、函数、方法、枚举、顶层声明）
+2. 对每个声明问："删掉注释，读者会漏掉非显然的事实吗？"
+   → 否 → 不写注释（保持代码干净）
+   → 是 → 写一条【有信息量】的注释（见"什么时候应该写"）
+3. 已有的复述式注释 → 删除或改写为有信息量版本
+4. 语言跟随用户对话语种（zh / en）
+5. 跑 dart analyze 确认注释没有引入警告
 ```
 
-脚本将 / The script will:
-1. 解析Dart文件 / Parse the Dart file
-2. 识别所有可文档化元素 / Identify all documentable elements
-3. 根据 `--lang` 参数生成相应语言的Dartdoc注释 / Generate Dartdoc comments in the selected language
-4. 在每个元素上方插入注释 / Insert comments above each element
+**关键：不要为了"覆盖每个元素"而批量堆砌注释。** 公开 API 通常更需要文档，私有实现细节通常不需要。
 
-### 步骤2：审查和完善 / Step 2: Review and Refine
+---
 
-生成后 / After generation：
-1. 审查生成的注释以确保准确性 / Review generated comments for accuracy
-2. 在需要时增强描述 / Enhance descriptions where needed
-3. 为复杂API添加具体示例 / Add concrete examples for complex APIs
-4. 确保参数文档清晰 / Ensure parameter documentation is clear
+## Dartdoc 格式规范 / Format
 
-## 基于任务的操作 / Task-Based Operations
-
-### 为单个文件生成 / Generate for Single File
-
-```bash
-# 中文 / Chinese
-python scripts/generate_dart_comments.py lib/models/user.dart
-
-# 英文 / English
-python scripts/generate_dart_comments.py lib/models/user.dart --lang en
-```
-
-### 为多个文件生成 / Generate for Multiple Files
-
-```bash
-# 中文 / Chinese
-find lib -name "*.dart" -exec python scripts/generate_dart_comments.py {} --lang zh \;
-
-# 英文 / English
-find lib -name "*.dart" -exec python scripts/generate_dart_comments.py {} --lang en \;
-```
-
-### 生成到单独目录 / Generate to Separate Directory
-
-```bash
-python scripts/generate_dart_comments.py lib/ lib_documented/ --lang en
-```
-
-## 文档标准 / Documentation Standards
-
-### 文件头元数据（仅新文件）/ File Header Metadata (New Files Only)
-
-当处理一个**新创建的 Dart 文件**（即文件中没有任何 `///` 文档注释）时，必须在文件顶部添加文件头。
-
-For **newly created Dart files** (no existing `///` doc comments), a file header must be added at the top.
-
-格式 / Format：
+### 基本结构
 
 ```dart
+/// 首行：简短的一句话摘要（不超过一行）。
 ///
-/// @author {authorName}
-/// @created {YYYY-MM-DD HH:mm:ss}
+/// 可选的详细说明：补充上下文、约束、行为。仅在有内容时才写。
 ///
-/// {file_description}
+/// * [paramName] 参数用途（仅当用途非显然时）。
 ///
+/// 返回值说明（仅当返回值有非显然语义时）。
+///
+/// 示例：（仅对非平凡 API）
+/// ```dart
+/// final r = add(2, 3);
+/// ```
 ```
 
-- **@author**：创建人（从 `git config user.name` 自动获取）/ Author (auto-detected from `git config user.name`)
-- **@created**：创建时间（格式 `YYYY-MM-DD HH:mm:ss`）/ Creation time (format `YYYY-MM-DD HH:mm:ss`)
-- **@description**：文件用途简述 / Brief description of the file's purpose
+### 标签速查
 
-判断"新文件"的标志：文件中不存在任何 `///` 开头的注释行。对于已有文档注释的旧文件，不添加此文件头。
+- `///` — 文档注释（Dart 用 `///`，不用 `/** */`）。
+- `[Name]` — 引用类、方法、参数、库（生成可点击链接）。
+- `* [paramName] ...` — 列出参数（Markdown 列表）。
+- 不要用 javadoc 的 `@author` / `@created` / `@param` —— 它们不属于 Dartdoc 规范。
 
-Indicator of a "new file": no lines starting with `///` exist. For existing files with doc comments, this header is skipped.
+### 示例：仅对非平凡 API 才加
 
-### 特定元素的文档 / Element-Specific Documentation
+只在 API 用法不直观时才写示例，且示例**必须能编译、有意义**（用真实变量名，凑数参数如 `0, 0` 不算）。简单方法不写示例。
 
-#### 函数和方法 / Functions & Methods
-- **描述 / Description**：功能 / What it does
-- **参数 / Parameters**：每个参数的用途 / Purpose of each parameter
-- **返回值 / Return**：返回的内容 / What it returns
-- **异常 / Exceptions**：何时抛出异常 / When exceptions are thrown
-- **示例 / Example**：复杂函数的使用示例 / Usage examples for complex functions
+---
 
-#### 类 / Classes
-- **描述 / Description**：目的和职责 / Purpose and responsibilities
-- **属性 / Properties**：关键属性及其含义 / Key properties and their meaning
-- **方法 / Methods**：公共方法概述 / Overview of public methods
-- **用法 / Usage**：如何使用该类 / How to use the class
+## 文件级说明 / File-level docs
 
-#### 枚举 / Enums
-- **描述 / Description**：枚举代表什么 / What the enum represents
-- **值 / Values**：每个枚举值的含义 / Meaning of each enum value
+**不使用** javadoc 风格的 `@author` / `@created` 文件头。如确需说明整个库的用途，用 Dartdoc 规范的 `library;` 段（可选，非强制）：
 
-### 质量指南 / Quality Guidelines
+```dart
+/// 提供用户资料相关的数据模型与服务。
+library user_profile;
 
-1. **简洁 / Be concise**：保持描述简短但信息丰富 / Keep descriptions short but informative
-2. **使用完整句子 / Use complete sentences**：以大写字母开头 / Start with a capital letter
-3. **记录非显而易见的行为 / Document non-obvious behavior**：关注代码中不明确的内容 / Focus on what's not obvious from the code
-4. **包含示例 / Include examples**：展示如何使用复杂API / Show how to use complex APIs
-5. **使用引用 / Use references**：链接到相关类和方法 / Link to related classes and methods
-6. **新文件添加文件头 / Add file header for new files**：自动添加 `@author` 和 `@created` / Auto-add `@author` and `@created`
+import 'package:flutter/material.dart';
+// ...
+```
 
-## 资源 / Resources
+只有当库的用途从文件名/内容看不出、或需要说明模块边界时才写。多数文件不需要文件级注释。
 
-### scripts/
-- `generate_dart_comments.py` - 生成Dartdoc注释的主脚本 / Main script for generating Dartdoc comments
+---
 
-### references/
-- `dartdoc_format.md` - 完整的Dartdoc格式参考和模板（中英双语）/ Complete Dartdoc format reference and templates (bilingual)
+## 示例对比 / Examples
 
-## 高级用法 / Advanced Usage
+### 例 1：自明方法 → 不写
 
-### 自定义模板 / Custom Templates
+```dart
+class User {
+  final String name;
+  final int age;
 
-自定义文档生成 / Customize documentation generation：
-1. 编辑 `scripts/generate_dart_comments.py` / Edit `scripts/generate_dart_comments.py`
-2. 修改 `STRINGS` 字典中的模板或添加新语言 / Modify templates in the `STRINGS` dict or add new languages
-3. 调整 `_generate_*` 方法中的生成逻辑 / Adjust generation logic in `_generate_*` methods
+  // ❌ 不要写这种复述式注释：
+  // /// Get display name.
+  // /// 返回 String 类型的结果。
+  // String getDisplayName() => name;
 
-### 添加新语言 / Adding a New Language
+  // ✅ 自明，保持干净
+  String getDisplayName() => name;
 
-在 `STRINGS` 字典中添加新语言的键，包含所有必需的字符串模板：
-
-Add a new language key to the `STRINGS` dict with all required string templates:
-
-```python
-STRINGS['ja'] = {
-    'file_header_desc': '{name} モジュール。',
-    'class_desc': '{words} クラス。',
-    # ... 所有必需的键 / all required keys
+  // ✅ 自明，保持干净
+  bool get isAdult => age >= 18;
 }
 ```
 
-### 与CI/CD集成 / CI/CD Integration
+### 例 2：构造函数只赋值字段 → 不写
 
-```yaml
-# GitHub Actions步骤示例 / Example GitHub Actions step
-- name: 生成文档 / Generate Docs
-  run: |
-    find lib -name "*.dart" -exec python scripts/generate_dart_comments.py {} --lang en \;
-```
-
-### 批量处理 / Batch Processing
-
-```bash
-# 为所有Dart文件生成英文文档 / Generate English docs for all Dart files
-find . -name "*.dart" -type f -exec python scripts/generate_dart_comments.py {} --lang en \;
-
-# 为所有Dart文件生成中文文档 / Generate Chinese docs for all Dart files
-find . -name "*.dart" -type f -exec python scripts/generate_dart_comments.py {} --lang zh \;
-```
-
-## 故障排除 / Troubleshooting
-
-### 常见问题 / Common Issues
-
-1. **脚本未找到 / Script not found**：确保在skill目录中或使用完整路径 / Ensure you're in the skill directory or using the full path
-2. **权限错误 / Permission error**：使用 `chmod +x` 使脚本可执行 / Use `chmod +x` to make the script executable
-3. **解析错误 / Parse error**：生成前检查Dart文件语法 / Check Dart file syntax before generation
-4. **UnicodeDecodeError（GBK编码错误）**：脚本已使用 `encoding='utf-8'` 打开文件，AI内联处理时也需使用 `encoding='utf-8'`
-5. **语言不支持 / Unsupported language**：使用 `--lang en` 或 `--lang zh`，不支持的代码将回退到中文
-
-## 示例 / Examples
-
-### 英文生成示例 / English Generation Example
-
-**之前 / Before:**
 ```dart
-class Calculator {
-  int add(int a, int b) {
-    return a + b;
-  }
+// ✅ 无需注释，签名已说明一切
+class User {
+  const User({required this.id, required this.name});
+  final String id;
+  final String name;
 }
 ```
 
-**之后 (`--lang en`) / After:**
+### 例 3：分页 API → 写（有真实约束）
+
 ```dart
-/// Represents a calculator for performing arithmetic operations.
-class Calculator {
-  /// Adds two numbers together.
+// 中文对话输出
+class ItemRepository {
+  /// 拉取一页数据。
   ///
-  /// * [a] The first number to add.
-  /// * [b] The second number to add.
+  /// [page] 从 1 开始计数，传 0 或负数会抛出 [ArgumentError]。
+  /// [pageSize] 每页条数，上限 100。
   ///
-  /// Returns the sum of [a] and [b].
-  ///
-  /// Example:
-  /// ```dart
-  /// final calculator = Calculator();
-  /// final result = calculator.add(2, 3);
-  /// print(result); // 5
-  /// ```
-  int add(int a, int b) {
-    return a + b;
-  }
-}
-```
-
-### 中文生成示例 / Chinese Generation Example
-
-**之后 (`--lang zh`) / After:**
-```dart
-///
-/// @author San Zhang
-/// @created 2026-06-25 17:03:00
-///
-/// calculator 模块。
-///
-
-/// calculator 类。
-class Calculator {
-  /// add。
-  ///
-  /// * [a] 要使用的a。
-  /// * [b] 要使用的b。
-  ///
-  /// 返回 int 类型的结果。
+  /// 当 [page] 超出最后一页时返回**空列表**而非抛异常——
+  /// 调用方应据此判断是否已到底部。
   ///
   /// 示例：
   /// ```dart
-  /// final result = instance.add(0, 0);
+  /// final first = await repo.fetchItems(page: 1, pageSize: 20);
   /// ```
-  int add(int a, int b) {
-    return a + b;
+  Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async {
+    // ...
   }
 }
 ```
+
+```dart
+// English conversation output
+class ItemRepository {
+  /// Fetches a single page of items.
+  ///
+  /// [page] is 1-based; passing 0 or a negative value throws [ArgumentError].
+  /// [pageSize] caps at 100.
+  ///
+  /// Returns an **empty list** (never throws) when [page] is past the last
+  /// page — callers should treat that as "no more data".
+  ///
+  /// Example:
+  /// ```dart
+  /// final first = await repo.fetchItems(page: 1, pageSize: 20);
+  /// ```
+  Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async {
+    // ...
+  }
+}
+```
+
+> 对比：例 3 的注释补充了**代码本身看不出来**的事实（1-based、上限 100、超页返回空而非抛异常），所以有价值。如果方法只是 `add(a, b)`，就什么都不写。
+
+### 例 4：枚举值需要含义时 → 写
+
+```dart
+// ❌ 自明，不写
+enum SortOrder { ascending, descending }
+
+// ✅ 值含义不直观，写
+enum HttpStatusCode {
+  /// 请求成功。
+  ok200,
+
+  /// 资源不存在。
+  notFound404,
+
+  /// 服务器内部错误。
+  internalError500,
+}
+```
+
+---
+
+## 自检清单 / Self-check
+
+写完注释后逐条确认：
+
+- [ ] 每条注释都补充了"代码本身看不出来"的信息？（没有复述名字/类型）
+- [ ] 自明的方法/getter/setter/构造函数**没有**注释？
+- [ ] 语言与用户对话语种一致，无中英混用？
+- [ ] 示例（若有）能编译、用了真实参数？
+- [ ] 没有用 `@author` / `@created` 等 javadoc 标签？
+- [ ] `dart analyze` 无新增警告？
+
+---
+
+## 参考 / Reference
+
+完整格式规范与中英写作指南见 [references/dartdoc_format.md](references/dartdoc_format.md)。

@@ -1,148 +1,112 @@
-# Dart Doc Comment Generator / Dart 注释生成器
+# Dart Doc Comments / Dart 文档注释
 
-> Generate comprehensive Dartdoc API documentation comments for Dart code.
-> 为 Dart 代码自动生成全面的 Dartdoc API 文档注释。
+> Auto-generate **informative** Dartdoc (`///`) comments inline for Dart/Flutter code — only where they add value, skipping self-explanatory code.
+> 为 Dart/Flutter 代码内联生成**有信息量**的 Dartdoc（`///`）注释——只在有价值时写，自动跳过自明代码。
 
-[![Python](https://img.shields.io/badge/python-3.7%2B-blue)](https://www.python.org/)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+[![Skill](https://img.shields.io/badge/skill-dart--generate--doc--comments-blue)](SKILL.md)
 
 ---
 
-## Features / 特性
+## 核心理念 / Core Idea
 
-- 🌐 **Bilingual support** — English (`--lang en`) and Chinese (`--lang zh`) comment generation
-- 📄 **Auto-detect new files** — Adds `@author` / `@created` headers for new Dart files
-- 🧩 **Comprehensive coverage** — Classes, enums, functions, methods, constructors
-- 📝 **Parameter & return documentation** — Auto-generated from function signatures
-- 💡 **Usage examples** — Auto-generated code examples for methods with parameters
-- 🔧 **Extensible** — Add new languages by extending the `STRINGS` dictionary
+此 skill 不是机械套模板的代码生成器——它指导 AI 在**写/改完 Dart 代码后**，**内联**补充有意义的文档注释。关键在于：**宁可少写，不要写废话。**
 
-## Quick Start / 快速开始
+This is not a mechanical template generator — it guides the AI to add **meaningful** doc comments **inline after writing/editing Dart code**. The key: **prefer writing nothing over writing noise.**
 
-```bash
-# Generate Chinese comments (default)
-python scripts/generate_dart_comments.py path/to/file.dart
+---
 
-# Generate English comments
-python scripts/generate_dart_comments.py path/to/file.dart --lang en
+## 何时自动触发 / When It Auto-activates
 
-# Generate and save to different file
-python scripts/generate_dart_comments.py path/to/file.dart output.dart --lang en
-```
+AI 创建、编写、编辑、脚手架生成任何 Dart 文件后自动生效，即使用户没提到"注释/文档"。语言跟随用户对话语种（中文→`zh`，英文→`en`）。
 
-## Example / 示例
+Activates automatically after the AI creates, writes, edits, or scaffolds any Dart file — even if the user never mentions "docs" or "comments". Language follows the conversation (Chinese→`zh`, English→`en`).
 
-### Before / 之前
+---
+
+## 何时跳过 / When to Skip
+
+默认对自明代码不写注释：
+
+- 方法名/字段名已说明用途（`getDisplayName()`、`isAdult`、`User.name`）
+- 参数文档只是重复类型（`/// [page] The page.`）
+- 返回值只是复述类型（`/// Returns the result as String.`）
+- 简单 getter / setter / 纯委托
+- 构造函数只是赋值字段
+- 纯数据类字段
+
+## 何时该写 / When to Write
+
+只有当注释能补充代码没说清楚的信息时才写：
+
+- 真实用途/意图、前置条件/约束
+- 单位/格式（Unix 毫秒 vs 秒、逻辑像素、经纬度）
+- 副作用、异常、边界/空安全行为
+- 复杂算法/协议（缓存、重试、分页、排序稳定性）
+
+---
+
+## 示例对比 / Example
+
+### 自明方法 → 不写 / Self-explanatory → Skip
 
 ```dart
-class Calculator {
-  int add(int a, int b) {
-    return a + b;
+class User {
+  final String name;
+  final int age;
+
+  // ❌ 不要写这种复述式注释 / No restating comments
+  String getDisplayName() => name;
+
+  // ✅ 自明，保持干净 / Self-explanatory, keep clean
+  bool get isAdult => age >= 18;
+}
+```
+
+### 分页 API → 写（有真实约束）/ Paginated API → Write (real constraints)
+
+```dart
+// 中文对话 / Chinese conversation
+class ItemRepository {
+  /// 拉取一页数据。
+  ///
+  /// [page] 从 1 开始计数，传 0 或负数会抛出 [ArgumentError]。
+  /// [pageSize] 每页条数，上限 100。
+  ///
+  /// 超出最后一页时返回**空列表**而非抛异常——
+  /// 调用方应据此判断是否已到底部。
+  Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async {
+    // ...
   }
 }
 ```
 
-### After (English) / 之后（英文）
-
 ```dart
-/// Represents a calculator for performing arithmetic operations.
-class Calculator {
-  /// Adds two numbers together.
+// English conversation
+class ItemRepository {
+  /// Fetches a single page of items.
   ///
-  /// * [a] The first number to add.
-  /// * [b] The second number to add.
+  /// [page] is 1-based; passing 0 or a negative value throws [ArgumentError].
+  /// [pageSize] caps at 100.
   ///
-  /// Returns the sum of [a] and [b].
-  ///
-  /// Example:
-  /// ```dart
-  /// final result = instance.add(0, 0);
-  /// ```
-  int add(int a, int b) {
-    return a + b;
+  /// Returns an **empty list** (never throws) when [page] is past the last
+  /// page — callers should treat that as "no more data".
+  Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async {
+    // ...
   }
 }
 ```
 
-### After (Chinese) / 之后（中文）
+---
 
-```dart
-/// calculator 类。
-class Calculator {
-  /// add。
-  ///
-  /// * [a] 要使用的 a。
-  /// * [b] 要使用的 b。
-  ///
-  /// 返回 int 类型的结果。
-  ///
-  /// 示例：
-  /// ```dart
-  /// final result = instance.add(0, 0);
-  /// ```
-  int add(int a, int b) {
-    return a + b;
-  }
-}
-```
+## 文件结构 / Structure
 
-## Batch Processing / 批量处理
+| 文件 / File | 说明 / Purpose |
+|-------------|----------------|
+| [SKILL.md](SKILL.md) | 主指令：触发条件、跳过/写规则、工作流 / Main directives |
+| [references/dartdoc_format.md](references/dartdoc_format.md) | 格式速查、噪声清单、中英写作指南 / Format reference |
+| [agents/openai.yaml](agents/openai.yaml) | 触发接口配置 / Interface config |
 
-```bash
-# Generate English docs for all Dart files
-find lib -name "*.dart" -exec python scripts/generate_dart_comments.py {} --lang en \;
-
-# Generate Chinese docs for all Dart files
-find lib -name "*.dart" -exec python scripts/generate_dart_comments.py {} --lang zh \;
-```
-
-## Adding a New Language / 添加新语言
-
-Extend the `STRINGS` dictionary in `scripts/generate_dart_comments.py`:
-
-```python
-STRINGS['ja'] = {
-    'file_header_desc': '{name} モジュール。',
-    'class_desc': '{words} クラス。',
-    'enum_desc': '{words} の列挙型。',
-    'function_desc': '{words_cap}。',
-    'method_desc': '{words_cap}。',
-    'constructor_desc': '新しい {parent} インスタンスを作成します。',
-    'param_desc': '使用する {words}。',
-    'return_prefix': '戻り値',
-    'return_desc': '{rtype} としての結果。',
-    'return_default': '結果。',
-    'example_label': '例：',
-    'new_file_log': '  [新しいファイル] ファイルヘッダーを追加しました（作成者: {author}）',
-    'generated_log': '{count} 個の要素のコメントを {path} に生成しました',
-    'no_elements': '{path} に文書化可能な要素が見つかりませんでした',
-    'usage': '使用法: generate_dart_comments.py <dart_file> [output_file] [--lang en|zh]',
-    'file_not_found': 'エラー: ファイル {path} が見つかりません',
-}
-```
-
-## Documentation Standards / 文档标准
-
-See [references/dartdoc_format.md](references/dartdoc_format.md) for:
-- File header metadata format
-- Documentation tag reference
-- Templates for functions, classes, and enums
-- Language-specific writing guidelines (EN/ZH)
-
-详见 [references/dartdoc_format.md](references/dartdoc_format.md)：
-- 文件头元数据格式
-- 文档标签参考
-- 函数、类、枚举模板
-- 中英文写作指南
-
-## CI/CD Integration / CI/CD 集成
-
-```yaml
-# GitHub Actions example
-- name: Generate Docs
-  run: |
-    find lib -name "*.dart" -exec python scripts/generate_dart_comments.py {} --lang en \;
-```
+---
 
 ## License
 

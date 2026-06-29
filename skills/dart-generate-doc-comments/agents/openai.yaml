@@ -1,4 +1,4 @@
 interface:
-  display_name: "Dart Doc Comment Generator / Dart 注释生成器"
-  short_description: "Generate Dartdoc API comments for Dart code (supports en/zh). 为Dart代码生成Dartdoc API文档注释（支持中英文）。"
-  default_prompt: "Use dart-generate-doc-comments to generate comprehensive Dartdoc documentation comments for my Dart code. Supports --lang en for English, --lang zh for Chinese. / 使用 dart-generate-doc-comments 为我的 Dart 代码生成 Dartdoc 文档注释。支持 --lang en 英文、--lang zh 中文。"
+  display_name: "Dart Doc Comments / Dart 文档注释"
+  short_description: "Auto-generate informative Dartdoc comments inline for Dart code, skipping self-explanatory elements. 为 Dart 代码内联生成有信息量的 Dartdoc 注释，自动跳过自明元素。"
+  default_prompt: "Use dart-generate-doc-comments to add informative Dartdoc (///) comments inline to my Dart/Flutter code — but only where a comment adds information the code itself doesn't show. Skip self-explanatory methods, getters, setters, field-assigning constructors, and comments that merely restate an identifier, parameter type, or return type. Comment language follows my conversation: Chinese -> zh, English -> en. / 使用 dart-generate-doc-comments 为我的 Dart/Flutter 代码内联补充有信息量的 Dartdoc（///）注释——只在注释能补充代码本身看不出来信息时才写。跳过自明的方法、getter/setter、只赋值字段的构造函数，以及仅复述标识符/参数类型/返回类型的注释。注释语言跟随我的对话：中文→zh，英文→en。"

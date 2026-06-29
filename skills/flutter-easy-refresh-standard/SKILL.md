@@ -1,18 +1,13 @@
 ---
 name: flutter-easy-refresh-standard
 description: >
-  This skill has THREE core purposes when the project depends on easy_refresh:
+  When the project depends on easy_refresh, standardize list pages with three rules:
 
-  1. **Auto-detect paginated APIs** — When a page calls an API with pagination parameters (page/pageSize/offset/limit/cursor), automatically refactor it to use EasyRefresh for pagination handling.
-  2. **Enforce EasyRefreshController** — All EasyRefresh usage MUST use EasyRefreshController to manage refresh/load-more state. `controlFinishRefresh: true` always required. `controlFinishLoad: true` ONLY when the page has onLoad (pagination).
-  3. **Auto-generate EasyRefreshConfig** — Auto-detect locale by the user's conversation language first (Chinese → zh config, English → en config), then fallback to project settings. Auto-create EasyRefreshConfig file for Header/Footer localization, and call setup in main().
+  1. Auto-detect paginated APIs — Refactor pages calling APIs with pagination params (page/pageSize/offset/limit/cursor) to use EasyRefresh.
+  2. Enforce EasyRefreshController — All EasyRefresh usage MUST use an EasyRefreshController. `controlFinishRefresh: true` always; `controlFinishLoad: true` ONLY when onLoad (pagination) is present. Dispose it, and call resetFooter() after refresh in paginated pages.
+  3. Auto-generate EasyRefreshConfig — Locale follows the user's conversation language first (Chinese→zh, English→en), then project settings; auto-create the config for Header/Footer localization and call setup in main() before runApp().
 
-  Trigger when: the project depends on easy_refresh; a page calls a paginated API; the user requests "刷新", "加载更多", "下拉刷新", "上拉加载", "分页", "load more", "pull-to-refresh", "pagination", or asks to add refresh/load-more to a list/page; or code contains EasyRefresh / easy_refresh usage.
-
-  三个核心目的：
-  1. 自动检测分页接口 — 当页面调用了带分页参数（page/pageSize/offset/limit/cursor）的接口时，自动改造为使用 EasyRefresh 处理分页。
-  2. 强制使用 EasyRefreshController — 所有 EasyRefresh 必须通过 Controller 控制刷新和加载状态。`controlFinishRefresh: true` 始终需要；`controlFinishLoad: true` 仅在有 onLoad（分页）时需要。
-  3. 自动生成 EasyRefreshConfig — 优先根据用户对话语种（中文→zh，英文→en），再回退到项目配置，自动创建本地化配置文件并在 main() 中调用初始化。
+  Trigger when: the project depends on easy_refresh; a page calls a paginated API; the user requests 刷新/加载更多/下拉刷新/上拉加载/分页/load more/pull-to-refresh/pagination, or asks to add refresh/load-more to a list/page; or code contains EasyRefresh or easy_refresh usage.
 ---
 
 # Flutter EasyRefresh 自动化规范 / Automated EasyRefresh Standardization
