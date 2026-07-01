@@ -69,11 +69,11 @@ class User {
 class ItemRepository {
   /// 拉取一页数据。
   ///
-  /// [page] 从 1 开始计数，传 0 或负数会抛出 [ArgumentError]。
-  /// [pageSize] 每页条数，上限 100。
-  ///
   /// 超出最后一页时返回**空列表**而非抛异常——
   /// 调用方应据此判断是否已到底部。
+  ///
+  /// * [page] 从 1 开始计数，传 0 或负数会抛出 [ArgumentError]。
+  /// * [pageSize] 每页条数，上限 100。
   Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async {
     // ...
   }
@@ -85,11 +85,11 @@ class ItemRepository {
 class ItemRepository {
   /// Fetches a single page of items.
   ///
-  /// [page] is 1-based; passing 0 or a negative value throws [ArgumentError].
-  /// [pageSize] caps at 100.
-  ///
   /// Returns an **empty list** (never throws) when [page] is past the last
   /// page — callers should treat that as "no more data".
+  ///
+  /// * [page] is 1-based; passing 0 or a negative value throws [ArgumentError].
+  /// * [pageSize] caps at 100.
   Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async {
     // ...
   }

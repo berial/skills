@@ -111,6 +111,50 @@ This skill activates automatically **after the AI writes or edits Dart code**: i
 - `* [paramName] ...` — 列出参数（Markdown 列表）。
 - 不要用 javadoc 的 `@author` / `@created` / `@param` —— 它们不属于 Dartdoc 规范。
 
+### 参数列表格式（强制） / Parameter List Format (Mandatory)
+
+> **凡是为参数写说明，必须使用 `* ` Markdown 无序列表标记，且每个参数独占一行。** 不允许把参数说明直接混写在段落正文里。
+
+**结构顺序**：摘要 → 空行 → 详细说明 → 空行 → 参数列表 → 空行 → 返回值 → 空行 → 示例。参数列表必须独立成段，前后用 `///` 空行分隔。
+
+#### ✅ 正确
+
+```dart
+/// 拉取一页数据。
+///
+/// 详细说明补充上下文、约束、行为。
+///
+/// * [page] 从 1 开始计数。
+/// * [pageSize] 每页条数，上限 100。
+Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async { ... }
+```
+
+#### ❌ 错误 1 — 参数说明混在正文段落中
+
+```dart
+/// 拉取一页数据。[page] 从 1 开始计数，[pageSize] 上限 100。
+Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async { ... }
+```
+
+#### ❌ 错误 2 — 缺少 `* ` 列表标记
+
+```dart
+/// 拉取一页数据。
+///
+/// [page] 从 1 开始计数。
+/// [pageSize] 每页条数，上限 100。
+Future<List<Item>> fetchItems({required int page, int pageSize = 20}) async { ... }
+```
+
+#### ❌ 错误 3 — 用 `- ` 而非 `* `
+
+```dart
+/// - [page] 从 1 开始计数。
+/// - [pageSize] 每页条数，上限 100。
+```
+
+> **唯一例外**：当方法只有一个参数且说明极短时，可省略列表标记，直接在摘要或详细说明中用 `[paramName]` 引用（例如「[page] 从 1 开始。」作为正文一句话）。但只要参数 ≥ 2 个，或单个参数的说明超过一句话，就必须用 `* ` 列表格式。
+
 ### 示例：仅对非平凡 API 才加
 
 只在 API 用法不直观时才写示例，且示例**必须能编译、有意义**（用真实变量名，凑数参数如 `0, 0` 不算）。简单方法不写示例。
@@ -239,6 +283,7 @@ enum HttpStatusCode {
 
 - [ ] 每条注释都补充了"代码本身看不出来"的信息？（没有复述名字/类型）
 - [ ] 自明的方法/getter/setter/构造函数**没有**注释？
+- [ ] 参数说明使用了 `* [paramName]` 列表格式？（参数 ≥ 2 个时必须用，且独立成段）
 - [ ] 语言与用户对话语种一致，无中英混用？
 - [ ] 示例（若有）能编译、用了真实参数？
 - [ ] 没有用 `@author` / `@created` 等 javadoc 标签？
